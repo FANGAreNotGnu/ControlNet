@@ -1,13 +1,17 @@
 import random
 
+
 class VisPriorDistribution():
     pass
 
+
+# NoClip: bbox not going out of image bound, thus no clip of bbox needed
 class UniformRandomLocationNoClipVPD(VisPriorDistribution):
-    def generate_bbox(self, W, H, x, y, w, h):
-        # W, H: image
-        # x, y, w, h: bbox
-        # NoClip: bbox not going out of image bound, thus no clip of bbox needed
+    def generate_bbox(self, img, bbox):
+
+        x, y, w, h = bbox
+        H, W, C = img.shape
+
         assert W >= 0
         assert H >= 0
         assert w >= 0
@@ -19,5 +23,5 @@ class UniformRandomLocationNoClipVPD(VisPriorDistribution):
         x_new = random.random() * x_max
         y_new = random.random() * y_max
 
-        return x_new,y_new,w,h
+        return x_new, y_new, w, h,
 

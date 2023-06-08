@@ -157,4 +157,6 @@ with block:
     run_button.click(fn=uniformer, inputs=[input_image, resolution], outputs=[gallery])
 
 
-block.launch(server_name='0.0.0.0')
+# block.launch(server_name='0.0.0.0')
+block.launch(server_name='0.0.0.0', share=True)
+
