@@ -1,6 +1,8 @@
 import cv2 as cv
 from PIL import ImageFilter
 
+from utils import *
+
 
 PIL_FILTERS = {
     "BLUR": ImageFilter.BLUR,
@@ -17,17 +19,20 @@ PIL_FILTERS = {
 
 class PILEdgeDetector():
     def detect(self, im, modes):
-        im1 = im.copy()
+        im1 = copy_cvbgr_to_pil(im)
         for mode in modes:
             if mode in PIL_FILTERS:
                 im1 = im1.filter(PIL_FILTERS[mode])
             else:
                 raise ValueError(f"{mode} is not supported as EdgeDetector's mode")
-        return im1
+        return copy_pilrgb_to_cv(im1)
 
 class CannyEdgeDetector():
-    def detect(self, img, low=100, high=200):
-        return cv.Canny(img,low,high)
+    def detect(self, img, low=100, high=200, blur=5):
+        print(img.shape)
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        img = cv.GaussianBlur(img, (blur, blur), 0)
+        return cv.Canny(img, low, high)
 
 # TODO: HED https://github.com/s9xie/hed
 # TODO: MLSD https://github.com/navervision/mlsd
