@@ -1,3 +1,4 @@
+import cv2 as cv
 import numpy as np
 import os
 
@@ -46,7 +47,11 @@ class VisPriorGenerator():
             assert target_img.shape[1] == W, f"shape miss match: {target_img.shape[1]} != {W}"
             assert target_img.shape[2] == sample_channel, f"shape miss match: {target_img.shape[2]} != {sample_channel}"
 
-        target_img[int(y_new):int(y_new)+im_prior.shape[0], int(x_new):int(x_new)+im_prior.shape[1], :] = im_prior  # consider overwrite or add to previous bbox when we use multiple bbox in an image
+        im_prior = cv.resize(im_prior, dsize=(w_new, h_new))
+        if im_prior.ndim == 2:  # cv resize will eliminate last dimension if it's 1
+            im_prior = im_prior[:, :, None]
+
+        target_img[int(y_new):int(y_new)+im_prior.shape[0], int(x_new):int(x_new)+im_prior.shape[1], :] = im_prior  # TODO: consider overwrite or add to previous bbox when we use multiple bbox in an image
 
         return target_img
 
