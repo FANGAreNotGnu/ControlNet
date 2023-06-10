@@ -13,7 +13,7 @@ class UniformRandomNoClipVPL(VisPriorLayout):
 
     def generate_a_layout_with_prior(self, im_shape, priors, num_object):
         layout = []
-        object_categories = random.sample(priors.keys(), num_object)
+        object_categories = random.choices(list(priors.keys()), k=num_object)
         for category_name in object_categories:
             im_prior = random.choice(priors[category_name])
             bbox = self.generate_bbox(im_shape=im_shape, prior_shape=im_prior.shape[:2])

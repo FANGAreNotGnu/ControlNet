@@ -1,4 +1,5 @@
 import cv2 as cv
+import json
 import numpy as np
 import os
 from collections import defaultdict
@@ -31,23 +32,26 @@ class VisPriorGenerator():
             raise ValueError(f"annotation should be a str (json's path) or a dict, but it is {type(annotation)}")
 
         for ann in annos["annotations"]:
-            image_id = ann["image_id"]
-            image_object = annos["images"][image_id]
-            assert image_object["id"] == image_id, f"image id not equals to image idx, image idx: {image_id}, image_id: {image_object['id']}"
+            try:
+                image_id = ann["image_id"]
+                image_object = annos["images"][image_id]
+                assert image_object["id"] == image_id, f"image id not equals to image idx, image idx: {image_id}, image_id: {image_object['id']}"
 
-            category_id = ann["category_id"]
-            category_object = annos["categories"][category_id]
-            assert category_object["id"] == category_id, f"category id not equals to category idx, category idx: {category_id}, category_id: {category_object['id']}"
+                category_id = ann["category_id"]
+                category_object = annos["categories"][category_id]
+                assert category_object["id"] == category_id, f"category id not equals to category idx, category idx: {category_id}, category_id: {category_object['id']}"
 
-            image_file_name = image_object['file_name']
-            category_name = category_object['name']
+                image_file_name = image_object['file_name']
+                category_name = category_object['name']
 
-            img = imread(os.path.join(im_folder, image_file_name))
-            bbox = ann_id['bbox']
+                img = imread(os.path.join(im_folder, image_file_name))
+                bbox = ann['bbox']
 
-            vis_prior = self.detect_one_bbox(img, bbox)
+                vis_prior = self.detect_one_bbox(img, bbox)
 
-            self.prior_bank[category_name].append(vis_prior)
+                self.prior_bank[category_name].append(vis_prior)
+            except:
+                print(f"failed to detect annotation: {ann['id']}")
 
         print("prior bank updated")
 
@@ -84,7 +88,7 @@ class VisPriorGenerator():
         else:
             assert target_img.shape[0] == im_shape[0], f"shape miss match: {target_img.shape[0]} != {im_shape[0]}"
             assert target_img.shape[1] == im_shape[1], f"shape miss match: {target_img.shape[1]} != {im_shape[1]}"
-            assert target_img.shape[2] == sample_channel, f"shape miss match: {target_img.shape[2]} != {sample_channel}"
+            assert target_img.shape[2] == self.sample_channel, f"shape miss match: {target_img.shape[2]} != {self.sample_channel}"
 
         im_prior = cv.resize(im_prior, dsize=(w_new, h_new))
         if im_prior.ndim == 2:  # cv resize will eliminate last dimension if it's 1
@@ -115,9 +119,9 @@ class VisPriorGenerator():
             else:
                 raise ValueError(f"the length of layout_object should be 2 or 3, but is {len(layout_object)}")
 
-            target_img = draw_one_bbox(self, im_prior=im_prior, new_bbox=bbox, fill_val=fill_val, target_img=target_img, im_shape=im_shape)
+            target_img = self.draw_one_bbox(im_prior=im_prior, new_bbox=bbox, fill_val=fill_val, target_img=target_img, im_shape=im_shape)
 
-        raise target_img
+        return target_img
 
     def visualize_one_bbox(self, img, bbox, category_name=None, prior_mode=None, fill_val=None, target_img=None):
         # used for simple visualization
@@ -131,30 +135,40 @@ class VisPriorGenerator():
 
         return target_img 
 
+    def visualize_one_layout(self, im_shape, category_name=None, prior_mode=None, fill_val=None,):
+        # used for simple visualization
+        # img: source img
+
+        layout = self.vpl.generate_a_layout_with_prior(im_shape=im_shape, priors=self.prior_bank, num_object=3)  # prior shape=hw
+
+        target_img = self.draw_one_layout(fill_val=fill_val, im_shape=(im_shape[0], im_shape[1], self.sample_channel), layout=layout)
+
+        return target_img 
+
 
 class CannyVPG(VisPriorGenerator):
-    def __init__(self, vpl, fill_val=0, low=100, high=200, blur=5):
-        super().__init__(vpl=vpl, fill_val=fill_val, detector=CannyEdgeDetector(low=low, high=high, blur=blur), sample_channel=1)
+    def __init__(self, vpl, fill_val=0, low=100, high=200, blur=5, annotation=None, im_folder=None):
+        super().__init__(vpl=vpl, fill_val=fill_val, detector=CannyEdgeDetector(low=low, high=high, blur=blur), sample_channel=1, annotation=annotation, im_folder=im_folder)
         self.low = low
         self.high = high
         self.blur = blur
 
 
 class HEDVPG(VisPriorGenerator):
-    def __init__(self, vpl, fill_val=0):
-        super().__init__(vpl=vpl, fill_val=fill_val, detector=HEDEdgeDetector(), sample_channel=1)
+    def __init__(self, vpl, fill_val=0, annotation=None, im_folder=None):
+        super().__init__(vpl=vpl, fill_val=fill_val, detector=HEDEdgeDetector(), sample_channel=1, annotation=annotation, im_folder=im_folder)
 
 
 class MLSDVPG(VisPriorGenerator):
-    def __init__(self, vpl, fill_val=0, thr_v=0.1, thr_d=0.1):
-        super().__init__(vpl=vpl, fill_val=fill_val, detector=MLSDEdgeDetector(thr_v=thr_v, thr_d=thr_d), sample_channel=1)
+    def __init__(self, vpl, fill_val=0, thr_v=0.1, thr_d=0.1, annotation=None, im_folder=None):
+        super().__init__(vpl=vpl, fill_val=fill_val, detector=MLSDEdgeDetector(thr_v=thr_v, thr_d=thr_d), sample_channel=1, annotation=annotation, im_folder=im_folder)
 
 
 class MidasVPG(VisPriorGenerator):
-    def __init__(self, vpl, fill_val=0, a=6.2):
-        super().__init__(vpl=vpl, fill_val=fill_val, detector=MidasDepthDetector(a=a), sample_channel=1)
+    def __init__(self, vpl, fill_val=0, a=6.2, annotation=None, im_folder=None):
+        super().__init__(vpl=vpl, fill_val=fill_val, detector=MidasDepthDetector(a=a), sample_channel=1, annotation=annotation, im_folder=im_folder)
 
 
 class UniformerVPG(VisPriorGenerator):
-    def __init__(self, vpl, fill_val=0):
-        super().__init__(vpl=vpl, fill_val=fill_val, detector=UniformerMaskDetector())
+    def __init__(self, vpl, fill_val=0, annotation=None, im_folder=None):
+        super().__init__(vpl=vpl, fill_val=fill_val, detector=UniformerMaskDetector(), annotation=annotation, im_folder=im_folder)
