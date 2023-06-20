@@ -3,6 +3,8 @@ import numpy as np
 
 from torch.utils.data import Dataset
 
+import sys
+sys.path.append("/home/ubuntu/dad/ControlNet/dad/vis_prior")
 from utils import imread
 
 

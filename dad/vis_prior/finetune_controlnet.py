@@ -17,7 +17,7 @@ dataset = VisPriorDataset(annotation_file=annotation_path)
 model_config = '../../models/cldm_v15.yaml'
 resume_path = '../../models/control_sd15_hed.pth'
 save_folder = "/media/data/dad/cnet/experiments/"
-save_name = "apple_hed_1e-6_0619"
+save_name = "apple_hed_2e-6_0619"
 gpus = -1
 batch_size = 1
 accumulate_grad_batches = 4

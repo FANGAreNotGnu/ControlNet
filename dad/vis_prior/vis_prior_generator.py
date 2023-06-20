@@ -4,6 +4,9 @@ import numpy as np
 import os
 from collections import defaultdict
 
+
+import sys
+sys.path.append("/home/ubuntu/dad/ControlNet/dad/vis_prior")
 from utils import crop_bboxes, imread
 from vis_prior_detector import CannyEdgeDetector, HEDEdgeDetector, MLSDEdgeDetector, MidasDepthDetector, UniformerMaskDetector
 

@@ -1,8 +1,6 @@
 import cv2 as cv
 from PIL import ImageFilter
 
-from utils import *
-
 import sys
 sys.path.append("/home/ubuntu/dad/ControlNet")
 
@@ -11,6 +9,8 @@ from annotator.mlsd import MLSDdetector
 from annotator.midas import MidasDetector
 from annotator.uniformer import UniformerDetector
 
+sys.path.append("/home/ubuntu/dad/ControlNet/dad/vis_prior")
+from utils import *
 
 PIL_FILTERS = {
     "BLUR": ImageFilter.BLUR,
