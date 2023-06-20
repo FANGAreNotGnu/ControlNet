@@ -4,7 +4,7 @@ import numpy as np
 import os
 from collections import defaultdict
 
-from utils import imread
+from utils import crop_bboxes, imread
 from vis_prior_detector import CannyEdgeDetector, HEDEdgeDetector, MLSDEdgeDetector, MidasDepthDetector, UniformerMaskDetector
 
 
@@ -71,6 +71,17 @@ class VisPriorGenerator():
         im_prior = self.detector(img=im_cropped)
         if im_prior.ndim == 2:
             im_prior = im_prior[:, :, None]
+
+        return im_prior
+
+    def detect_one_img(self, img, bboxes=None):
+
+        im_prior = self.detector(img=img)
+        if im_prior.ndim == 2:
+            im_prior = im_prior[:, :, None]
+
+        if bboxes is not None:
+            im_prior = crop_bboxes(img=im_prior, bboxes=bboxes)
 
         return im_prior
 

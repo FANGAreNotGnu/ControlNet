@@ -30,7 +30,7 @@ class PILEdgeDetector():
         return self.detect(img=img, modes=modes)
 
     def detect(self, im, modes):
-        im1 = copy_cvbgr_to_pil(im)
+        im1 = copy_numpy_to_pil(im)
         for mode in modes:
             if mode in PIL_FILTERS:
                 im1 = im1.filter(PIL_FILTERS[mode])
@@ -55,7 +55,7 @@ class CannyEdgeDetector():
 
     def detect(self, img, low=100, high=200, blur=5):
         #print(img.shape)
-        #img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        #img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
         img = cv.GaussianBlur(img, (blur, blur), 0)
         return cv.Canny(img, low, high)
 
