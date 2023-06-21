@@ -1,3 +1,4 @@
+import argparse
 import os
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
@@ -53,7 +54,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--annotation_path", default=None, type=str)  # the visual prior json annotation file path
     parser.add_argument("--model_config", default='/home/ubuntu/dad/ControlNet/models/cldm_v15.yaml', type=str)
-    parser.add_argument("--resume_path", default='control_sd15_hed.pth', type=str)
+    parser.add_argument("--resume_path", default='/home/ubuntu/dad/ControlNet/models/control_sd15_hed.pth', type=str)
     parser.add_argument("--save_folder", default="/media/data/dad/cnet/experiments/", type=str)
     parser.add_argument("-n", "--save_name", default=None, type=str)
     parser.add_argument("--gpus", default=-1, type=int)
@@ -61,7 +62,7 @@ def main():
     parser.add_argument("--accumulate_grad_batches", default=4, type=int)  # real_batch_size = batch_size * accumulate_grad_batches
     parser.add_argument("-e", "--max_epochs", default=100, type=int) 
     parser.add_argument("--every_n_epochs", default=10, type=int)
-    parser.add_argument("--logger_freq", default=100, type=int)
+    parser.add_argument("-f", "--logger_freq", default=100, type=int)
     parser.add_argument("-l", "--learning_rate", default=1e-6, type=float)
     parser.add_argument("-s", "--sd_locked", action='store_false')
     parser.add_argument("-m", "--only_mid_control", action='store_true')

@@ -11,6 +11,10 @@ def imwrite(im_path, img):
     return cv.imwrite(im_path, img[:,:,::-1])
 
 
+def resize(img, new_W, new_H, anno=None):
+    return cv.resize(img, (new_W, new_H))
+
+
 def copy_cvbgr_to_pil(img):
     im_np = img.copy()
     im_np = cv.cvtColor(im_np, cv.COLOR_BGR2RGB)
