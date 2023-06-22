@@ -39,10 +39,12 @@ class UniformRandomNoClipVPL(VisPriorLayout):
         assert w >= 0
         assert h >= 0
 
+        # TODO: scale up and down here should be randomly dynamic threshold
+
         w_max = min(w * self.scale_up, W-1)
         h_max = min(h * self.scale_up, H-1)
-        w_min = w * self.scale_down
-        h_min = h * self.scale_down
+        w_min = min(w * self.scale_down, W-1)
+        h_min = min(h * self.scale_down, H-1)
 
         w_new = int(random.uniform(w_min, w_max))
         h_new = int(random.uniform(h_min, h_max))

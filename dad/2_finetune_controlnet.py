@@ -68,6 +68,14 @@ def main():
     parser.add_argument("-m", "--only_mid_control", action='store_true')
     args = parser.parse_args()
 
+    '''
+    e.g. coco10novel (coco 10 shot, novel cat only)
+    CUDA_VISIBLE_DEVICES=3 python3 2_finetune_controlnet.py \
+        -a /media/data/dad/cnet/vispriors/coco10novel/vis_prior_annotation.json \
+        -n coco10novel \
+        -f 40
+    '''
+
     finetune_controlnet(
             annotation_path=args.annotation_path,
             model_config=args.model_config,

@@ -4,6 +4,7 @@ import numpy as np
 import os
 from collections import defaultdict
 
+from pycocotools.coco import COCO  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoDemo.ipynb
 
 import sys
 sys.path.append("/home/ubuntu/dad/ControlNet/dad/vis_prior")
@@ -26,26 +27,27 @@ class VisPriorGenerator():
             self.update_prior_bank(self.annotation, self.im_folder)
 
     def update_prior_bank(self, annotation, im_folder):
-        if isinstance(annotation, str):
-            with open(annotation, "r") as f:
-                annos = json.load(f)
-        elif isinstance(annotation, dict):
-            annos = annotation
-        else:
-            raise ValueError(f"annotation should be a str (json's path) or a dict, but it is {type(annotation)}")
-
-        for ann in annos["annotations"]:
+        assert isinstance(annotation, str), f"annotation should be a str (json's path), but it is {type(annotation)}"
+        coco = COCO(annotation)
+        #if isinstance(annotation, str):
+        #    with open(annotation, "r") as f:
+        #        annos = json.load(f)
+        #elif isinstance(annotation, dict):
+        #    annos = annotation
+        #else:
+        #    raise ValueError(f"annotation should be a str (json's path) or a dict, but it is {type(annotation)}")
+        annIds = coco.getAnnIds()
+        anns = coco.loadAnns(annIds)
+        for ann in anns:
             try:
                 image_id = ann["image_id"]
-                image_object = annos["images"][image_id]
-                assert image_object["id"] == image_id, f"image id not equals to image idx, image idx: {image_id}, image_id: {image_object['id']}"
+                img = coco.loadImgs([image_id])[0]
 
-                category_id = ann["category_id"]
-                category_object = annos["categories"][category_id]
-                assert category_object["id"] == category_id, f"category id not equals to category idx, category idx: {category_id}, category_id: {category_object['id']}"
+                cat_id = ann["category_id"]
+                cat = coco.loadCats([cat_id])[0]
 
-                image_file_name = image_object['file_name']
-                category_name = category_object['name']
+                image_file_name = img['file_name']
+                category_name = cat['name']
 
                 img = imread(os.path.join(im_folder, image_file_name))
                 bbox = ann['bbox']
@@ -53,7 +55,9 @@ class VisPriorGenerator():
                 vis_prior = self.detect_one_bbox(img, bbox)
 
                 self.prior_bank[category_name].append(vis_prior)
-            except:
+
+            except Exception as e:
+                print(e)  # Output size is too small is due to small boundingbox
                 print(f"failed to detect annotation: {ann['id']}")
 
         print("prior bank updated")
@@ -66,6 +70,31 @@ class VisPriorGenerator():
             labels_path = os.path.join(data_path, "_annotations.coco.json")
 
         raise NotImplementedError
+
+    def generate_layouts(self, im_shape, num_object_per_layout, num_layouts):
+        layouts = []
+        for i in range(num_layouts):
+            layouts.append(
+                self.vpl.generate_a_layout_with_prior(
+                        im_shape=im_shape, 
+                        priors=self.prior_bank, 
+                        num_object=num_object_per_layout,
+                    )
+            )
+        
+        return layouts
+
+    def generate_prompts(self, layouts):
+        return [", ".join([item[0] for item in layout]) for layout in layouts]
+
+    def generate_vis_priors(self, layouts, im_shape, fill_val=None,):
+        vis_priors = []
+        assert im_shape[2] == self.sample_channel, "Input im_shape channel error!"
+        for layout in layouts:
+            vis_prior = self.draw_one_layout(im_shape=im_shape, layout=layout, fill_val=fill_val)
+            vis_priors.append(vis_prior)
+
+        return vis_priors
 
     def detect_one_bbox(self, img, bbox):
         x, y, w, h = bbox
@@ -151,7 +180,6 @@ class VisPriorGenerator():
 
     def visualize_one_layout(self, im_shape, category_name=None, prior_mode=None, fill_val=None,):
         # used for simple visualization
-        # img: source img
 
         layout = self.vpl.generate_a_layout_with_prior(im_shape=im_shape, priors=self.prior_bank, num_object=3)  # prior shape=hw
 

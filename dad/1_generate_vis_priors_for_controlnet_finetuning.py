@@ -58,6 +58,16 @@ def main():
     parser.add_argument("--ext", default="jpg", type=str)
     args = parser.parse_args()
 
+
+    '''
+    e.g. coco-10shot-novelonly
+    python3 1_generate_vis_priors_for_controlnet_finetuning.py \
+        -i /media/data/coco17/coco/train2017/ \
+        -a /media/data/coco17/coco/seed1/10shot_novel.json \
+        -v coco10novel
+    '''
+
+
     generate_vis_prior(
             source_image_folder=args.source_image_folder,
             source_annotation_file=args.source_annotation_file,
