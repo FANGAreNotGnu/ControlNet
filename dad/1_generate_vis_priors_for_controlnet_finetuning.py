@@ -60,11 +60,19 @@ def main():
 
 
     '''
-    e.g. coco-10shot-novelonly
+    e.g. coco-10shot-novel
     python3 1_generate_vis_priors_for_controlnet_finetuning.py \
         -i /media/data/coco17/coco/train2017/ \
         -a /media/data/coco17/coco/seed1/10shot_novel.json \
         -v coco10novel
+
+    e.g. coco-10shot-novel-scaled
+    python3 1_generate_vis_priors_for_controlnet_finetuning.py \
+        -i /media/data/coco17/coco/train2017/ \
+        -a /media/data/coco17/coco/seed1/10shot_novel.json \
+        -v coco10novelscaled \
+        -d 0.5 \
+        -u 5
     '''
 
 
@@ -74,6 +82,8 @@ def main():
             output_parent_folder=args.output_parent_folder,
             vis_prior_name=args.vis_prior_name,
             ext=args.ext,
+            scale_down=args.scale_down,
+            scale_up=args.scale_up,
         )
 
 

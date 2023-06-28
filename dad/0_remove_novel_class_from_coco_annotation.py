@@ -43,24 +43,32 @@ def remove_novel_class(source_file_path, target_file_path, fileter_name):
 
     old_annos = gt["annotations"]
     old_images = gt["images"]
+    old_cats = gt["categories"]
     print(f"#old annos: {len(old_annos)}")
     print(f"#old images: {len(old_images)}")
+    print(f"#old cats: {len(old_cats)}")
     new_annos = []
     new_images = []
+    new_cats = []
 
     valid_image_id = set()
     for anno in old_annos:
-        if anno["category_id"] in FILTER_DICT[fileter_name]:  # TODO: make it configurable
+        if anno["category_id"] in FILTER_DICT[fileter_name]:
             new_annos.append(anno)
             valid_image_id.add(anno["image_id"])
+    for cat in old_cats:
+        if cat["id"] in FILTER_DICT[fileter_name]:
+            new_cats.append(cat)
     for image in old_images:
-        if image["id"] in valid_image_id:  # TODO: make it configurable
+        if image["id"] in valid_image_id:
             new_images.append(image)
 
     gt["annotations"] = new_annos
     gt["images"] = new_images
+    gt["categories"] = new_cats
     print(f"#new annos: {len(new_annos)}")
     print(f"#new images: {len(new_images)}")
+    print(f"#new cats: {len(new_cats)}")
     
     with open(target_file_path, "w+") as f:
         json.dump(gt, f)
@@ -78,6 +86,8 @@ def main():
         -s /media/data/coco17/coco/seed1/10shot.json \
         -t /media/data/coco17/coco/seed1/10shot_novel.json \
         -f coco_novel_class_ids
+
+    see step0.sh for more example commands
     '''
 
     args = parser.parse_args()

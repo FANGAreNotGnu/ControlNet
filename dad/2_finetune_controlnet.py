@@ -73,7 +73,8 @@ def main():
     CUDA_VISIBLE_DEVICES=3 python3 2_finetune_controlnet.py \
         -a /media/data/dad/cnet/vispriors/coco10novel/vis_prior_annotation.json \
         -n coco10novel \
-        -f 40
+        -f 40 \
+        -l 2e-6
     '''
 
     finetune_controlnet(
