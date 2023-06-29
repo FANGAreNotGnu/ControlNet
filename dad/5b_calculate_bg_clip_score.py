@@ -6,7 +6,7 @@ import shutil
 
 
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw
 from tqdm import tqdm
 from pycocotools.coco import COCO  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoDemo.ipynb
 import clip
@@ -31,10 +31,12 @@ PROMPT_ENGINEERING = {
 }
 
 
-def calculate_ann_clip_score(
+def calculate_bg_clip_score(
     unfiltered_data_folder,
     clip_mode,
     device,
+    mask_fill_color="black",
+    prompt_mode="csl",
 ):
 
     assert clip_mode in ["l", "b"]
@@ -44,6 +46,9 @@ def calculate_ann_clip_score(
         clip_model_name =  "ViT-B/32"
     else:
         raise ValueError(f"clip_mode should be in {['l', 'b']}, but it is: {clip_mode}")
+    
+    assert prompt_mode in PROMPT_ENGINEERING[clip_mode].keys()
+    pe = PROMPT_ENGINEERING[clip_mode][prompt_mode]
 
     unfiltered_annotation_path = os.path.join(unfiltered_data_folder, "annotation.json")
 
@@ -53,38 +58,40 @@ def calculate_ann_clip_score(
 
     model, preprocess = clip.load(clip_model_name, device=device)
 
-    for ann in tqdm(unfiltered_annotation['annotations']):
-        ann_id = ann["id"]
-        x, y, w, h = ann['bbox']
-        
-        image_id = ann['image_id']
-        img_obj = coco.loadImgs([image_id])[0]
+    for img_obj in tqdm(unfiltered_annotation['images']):
+        image_id = img_obj["id"]
         img_path = os.path.join(unfiltered_data_folder, 'images', img_obj['file_name'])
         img = Image.open(img_path)
-        img = img.crop((x, y, x+w, y+h))
-        #img = imread(img_path)
         
-        cat_id = ann['category_id']
-        cat_obj = coco.loadCats([cat_id])[0]
-        cat_name = cat_obj["name"]
+        ann_ids = coco.getAnnIds(imgIds=image_id)
+        imgdraw = ImageDraw.Draw(img)  
+        cat_ids = set()
+        for ann_id in ann_ids:
+            ann = coco.loadAnns([ann_id])[0]
+            x, y, w, h = ann['bbox']
+            imgdraw.rectangle((x, y, x+w, y+h), fill=mask_fill_color)
+            cat_ids.add(ann['category_id'])
+        
+        cat_objs = coco.loadCats(cat_ids)
+        cat_names = [cat_obj["name"] for cat_obj in cat_objs] # only detect for categories assigned
         
         image = preprocess(img).unsqueeze(0).to(device)
-        text = clip.tokenize([pe[cat_name] for k, pe in PROMPT_ENGINEERING[clip_mode].items()]).to(device)
+        text = clip.tokenize([pe(prompt) for prompt in cat_names]).to(device)
         
         with torch.no_grad():
             image_features = model.encode_image(image)
             text_features = model.encode_text(text)
 
             logits_per_image, logits_per_text = model(image, text)
-        
-        for i, (k, pe) in enumerate(PROMPT_ENGINEERING[clip_mode].items()):
-            ann[k] = float(logits_per_image[0][i]/100)
-
+            
+        for i, cat_name in enumerate(cat_names):
+            img_obj["%s_%s"%(prompt_mode,cat_name)] = float(logits_per_image[0][i])
+    
     with open(unfiltered_annotation_path, "w+") as f:
         json.dump(unfiltered_annotation, f)
 
-    print(len(unfiltered_annotation['annotations']))
-    print(unfiltered_annotation['annotations'][222])
+    print(len(unfiltered_annotation['images']))
+    print(unfiltered_annotation['images'][222])
 
 
 def main():
@@ -92,6 +99,8 @@ def main():
     parser.add_argument("-d", "--unfiltered_data_folder", default=None, type=str)
     parser.add_argument("--clip_mode", default="l", type=str)
     parser.add_argument("--device", default="cuda", type=str)
+    parser.add_argument("--mask_fill_color", default="black", type=str)
+    parser.add_argument("--prompt_mode", default="csl", type=str)
     args = parser.parse_args()
 
     '''
@@ -100,10 +109,12 @@ def main():
         -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_promptenhanced 
     '''
 
-    calculate_ann_clip_score(
+    calculate_bg_clip_score(
             unfiltered_data_folder=args.unfiltered_data_folder,
             clip_mode=args.clip_mode,
             device=args.device,
+            mask_fill_color=args.mask_fill_color,
+            prompt_mode=args.prompt_mode,
         )
 
 
