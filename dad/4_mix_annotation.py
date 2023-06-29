@@ -1,3 +1,4 @@
+import argparse
 import glob
 import json
 import numpy as np
@@ -98,7 +99,7 @@ def main():
     e.g. coco10novel (coco 10 shot, novel cat only)
     python3 4_mix_annotation.py \
         -a /media/data/coco17/coco/seed1/10shot_novel.json \
-        -s /media/data/dad/cnet/experiments/coco10novel/syn_n2000_o1_s1_p640_promptenhanced
+        -s /media/data/dad/cnet/experiments/coco10novel/syn_n2000_o1_s1_p640
     '''
 
     mix_annotation(

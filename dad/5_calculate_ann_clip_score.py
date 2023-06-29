@@ -1,3 +1,4 @@
+import argparse
 import glob
 import json
 import numpy as np
@@ -69,7 +70,7 @@ def calculate_ann_clip_score(
         cat_name = cat_obj["name"]
         
         image = preprocess(img).unsqueeze(0).to(device)
-        text = clip.tokenize([pe[cat_name] for k, pe in PROMPT_ENGINEERING[clip_mode].items()]).to(device)
+        text = clip.tokenize([pe(cat_name) for k, pe in PROMPT_ENGINEERING[clip_mode].items()]).to(device)
         
         with torch.no_grad():
             image_features = model.encode_image(image)
@@ -97,7 +98,7 @@ def main():
     '''
     e.g. coco10novel (coco 10 shot, novel cat only)
     python3 5_calculate_ann_clip_score.py \
-        -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_promptenhanced 
+        -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640
     '''
 
     calculate_ann_clip_score(

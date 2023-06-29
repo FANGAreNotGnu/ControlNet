@@ -1,3 +1,4 @@
+import argparse
 import glob
 import json
 import numpy as np
@@ -105,8 +106,8 @@ def main():
 
     '''
     e.g. coco10novel (coco 10 shot, novel cat only)
-    python3 5_calculate_ann_clip_score.py \
-        -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_promptenhanced 
+    python3 5b_calculate_bg_clip_score.py \
+        -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_pfa_csl_p20
     '''
 
     calculate_bg_clip_score(

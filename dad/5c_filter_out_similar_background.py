@@ -1,4 +1,5 @@
 from collections import defaultdict
+import argparse
 import glob
 import json
 import numpy as np
@@ -13,10 +14,6 @@ def filter_background(
     clip_score_key,
     percent_kept,
 ):
-    unfiltered_data_folder = "/media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_pfa_csl40"
-    clip_score_key = "csl"
-    percent_kept = 30
-
     unfiltered_annotation_path = os.path.join(unfiltered_data_folder, "annotation.json")
     unfiltered_image_folder = os.path.join(unfiltered_data_folder, "images")
     target_folder = unfiltered_data_folder + "_pfb_%s%d" % (clip_score_key, percent_kept)
@@ -89,15 +86,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--unfiltered_data_folder", default=None, type=str)
     parser.add_argument("-k", "--clip_score_key", default=None, type=str)
-    parser.add_argument("-p", "--percent_kept", default=None, type=str)
+    parser.add_argument("-p", "--percent_kept", default=None, type=int)
     args = parser.parse_args()
 
     '''
     e.g. coco10novel (coco 10 shot, novel cat only)
     python3 5c_filter_out_similar_background.py \
-        -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_pfa_csl40 \
+        -d /media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640_pfa_csl_p30 \
         -k csl \
-        -p 20
+        -p 30
     '''
 
     filter_background(

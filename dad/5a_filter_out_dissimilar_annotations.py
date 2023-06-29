@@ -1,4 +1,5 @@
 from collections import defaultdict
+import argparse
 import glob
 import json
 import numpy as np
@@ -12,10 +13,6 @@ def filter_annotation(
     clip_score_key,
     percent_kept,
 ):
-    unfiltered_data_folder = "/media/data/dad/cnet/experiments/coco10novel/mix_n2000_o1_s1_p640"
-    clip_score_key = "csl"
-    percent_kept = 30
-
     unfiltered_annotation_path = os.path.join(unfiltered_data_folder, "annotation.json")
     unfiltered_image_folder = os.path.join(unfiltered_data_folder, "images")
     target_folder = unfiltered_data_folder + "_pfa_%s%d" % (clip_score_key, percent_kept)
@@ -37,7 +34,7 @@ def filter_annotation(
 
     clip_scores = defaultdict(list)
     for ann in unfiltered_annotation["annotations"]:
-        if "segmentation" not in anno:  # only use synthetic data (no GT data) to set the threshold
+        if "segmentation" not in ann:  # only use synthetic data (no GT data) to set the threshold
             clip_scores[ann['category_id']].append(ann[clip_score_key])
 
     csl_thres = {category_id:np.percentile(scores, 100 - percent_kept) for category_id, scores in clip_scores.items()}
@@ -76,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--unfiltered_data_folder", default=None, type=str)
     parser.add_argument("-k", "--clip_score_key", default=None, type=str)
-    parser.add_argument("-p", "--percent_kept", default=None, type=str)
+    parser.add_argument("-p", "--percent_kept", default=None, type=int)
     args = parser.parse_args()
 
     '''
