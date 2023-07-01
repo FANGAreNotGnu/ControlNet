@@ -1,4 +1,4 @@
-name: control
+name: dad_control
 channels:
   - pytorch
   - defaults
