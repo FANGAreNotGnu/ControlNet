@@ -3,7 +3,6 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-from functools import partial
 
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like
 
@@ -81,9 +80,15 @@ class PLMSSampler(object):
                ):
         if conditioning is not None:
             if isinstance(conditioning, dict):
-                cbs = conditioning[list(conditioning.keys())[0]].shape[0]
+                ctmp = conditioning[list(conditioning.keys())[0]]
+                while isinstance(ctmp, list): ctmp = ctmp[0]
+                cbs = ctmp.shape[0]
                 if cbs != batch_size:
                     print(f"Warning: Got {cbs} conditionings but batch-size is {batch_size}")
+            elif isinstance(conditioning, list):
+                for ctmp in conditioning:
+                    if ctmp.shape[0] != batch_size:
+                        print(f"Warning: Got {cbs} conditionings but batch-size is {batch_size}")
             else:
                 if conditioning.shape[0] != batch_size:
                     print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
@@ -108,6 +113,8 @@ class PLMSSampler(object):
                                                     log_every_t=log_every_t,
                                                     unconditional_guidance_scale=unconditional_guidance_scale,
                                                     unconditional_conditioning=unconditional_conditioning,
+                                                    dynamic_threshold=dynamic_threshold,
+                                                    ucg_schedule=ucg_schedule,
                                                     )
         return samples, intermediates
 
@@ -117,7 +124,8 @@ class PLMSSampler(object):
                       callback=None, timesteps=None, quantize_denoised=False,
                       mask=None, x0=None, img_callback=None, log_every_t=100,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
-                      unconditional_guidance_scale=1., unconditional_conditioning=None,):
+                      unconditional_guidance_scale=1., unconditional_conditioning=None, dynamic_threshold=None,
+                      ucg_schedule=None):
         device = self.model.betas.device
         b = shape[0]
         if x_T is None:
@@ -149,12 +157,17 @@ class PLMSSampler(object):
                 img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
                 img = img_orig * mask + (1. - mask) * img
 
+            if ucg_schedule is not None:
+                assert len(ucg_schedule) == len(time_range)
+                unconditional_guidance_scale = ucg_schedule[i]
+
             outs = self.p_sample_plms(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
                                       corrector_kwargs=corrector_kwargs,
                                       unconditional_guidance_scale=unconditional_guidance_scale,
                                       unconditional_conditioning=unconditional_conditioning,
+                                      dynamic_threshold=dynamic_threshold,
                                       old_eps=old_eps, t_next=ts_next)
             img, pred_x0, e_t = outs
             old_eps.append(e_t)
@@ -172,21 +185,25 @@ class PLMSSampler(object):
     @torch.no_grad()
     def p_sample_plms(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
-                      unconditional_guidance_scale=1., unconditional_conditioning=None, old_eps=None, t_next=None):
+                      unconditional_guidance_scale=1., unconditional_conditioning=None,
+                      dynamic_threshold=None, old_eps=None, t_next=None):
         b, *_, device = *x.shape, x.device
 
         def get_model_output(x, t):
             if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
-                e_t = self.model.apply_model(x, t, c)
+                model_output = self.model.apply_model(x, t, c)
             else:
-                x_in = torch.cat([x] * 2)
-                t_in = torch.cat([t] * 2)
-                c_in = torch.cat([unconditional_conditioning, c])
-                e_t_uncond, e_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
-                e_t = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+                model_t = self.model.apply_model(x, t, c)
+                model_uncond = self.model.apply_model(x, t, unconditional_conditioning)
+                model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+
+            if self.model.parameterization == "v":
+                e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)
+            else:
+                e_t = model_output
 
             if score_corrector is not None:
-                assert self.model.parameterization == "eps"
+                assert self.model.parameterization == "eps", 'not implemented'
                 e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
 
             return e_t
@@ -204,7 +221,10 @@ class PLMSSampler(object):
             sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
 
             # current prediction for x_0
-            pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
+            if self.model.parameterization != "v":
+                pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
+            else:
+                pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
             if quantize_denoised:
                 pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
             # direction pointing to x_t
